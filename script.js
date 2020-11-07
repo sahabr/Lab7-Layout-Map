@@ -18,13 +18,13 @@ Promise.all([ // load multiple files
     
     let worldTopo = topojson.feature(worldmap, worldmap.objects.countries)
     .features; 
-    let projection = d3.geoMercator().translate([width / 2, height / 2]);
-    //let projection = d3.geoMercator().fitExtent([[0,0],[width,height]],topojson.feature(worldmap, worldmap.objects.countries))
-
+    //let projection = d3.geoMercator().translate([width/2, height/2]);
+    //let projection = d3.geoMercator().fitExtent([[0,0],[width,height]],topojson.feature(worldmap, worldmap.objects.countries));
+    let projection = d3.geoMercator().fitExtent([[-width,-height/2],[width,height/2]], topojson.feature(worldmap, worldmap.objects.countries));
     let path = d3.geoPath().projection(projection);
      
 
-    const svg = d3.select(".chart-area").append('svg')
+    const svg = d3.select("#chart-area").append('svg')
         .attr("viewBox", [-width / 2, -height / 2, width, height]);
     
 
@@ -41,14 +41,7 @@ Promise.all([ // load multiple files
     const size = d3.scaleLinear()
         .domain(d3.extent(airport_nodes,d=>d.passengers))
         .range([5,10]);
-    
-    const link = svg.append('g').selectAll('line')
-        .data(airport_links)
-        .join('line')
-        .attr('class','link')
-        .attr('stoke','#999')
-        .attr('stroke-width',1);
-        //.style('stroke-width',1);
+
 
     const force = d3.forceSimulation(airports.nodes)
         .force("charge", d3.forceManyBody().strength(-50))
@@ -86,9 +79,17 @@ Promise.all([ // load multiple files
         .on('start',dragStart)
         .on('drag',dragged)
         .on('end',dragEnd)
-        .filter(visType='force');
+        .filter(event=>visType==='force');
     };
-
+    
+    const link = svg.append('g').selectAll('line')
+        .data(airport_links)
+        .join('line')
+        .attr('class','link')
+        .attr('stroke','#999')
+        .attr('stroke-width',1);
+        //.style('stroke-width',1);
+    
     const node = svg.append('g').selectAll('circle')
     .data(airport_nodes)
     .join('circle')
@@ -101,13 +102,14 @@ Promise.all([ // load multiple files
 
     d3.selectAll('input[name=typeforce]').on('change',event=>{
         type = event.target.value;
-        //drag.filter(event => visType === "force")
         switchLayout();
+        //visType='map';
+        
     });
 
     function switchLayout(){
-        
         if (type=='map'){
+            visType="map";
             force.stop();
             svg.selectAll('.map')
                 .style('opacity',1)
@@ -117,22 +119,23 @@ Promise.all([ // load multiple files
                 .attr('x1', function(d){
                     return projection([d.source.longitude,d.source.latitude])[0];
                 })
-                .attr('x2', function(d){
+                .attr('y1', function(d){
                     return projection([d.source.longitude,d.source.latitude])[1];
                 })
-                .attr('y1', function(d){
-                    return projection([d.source.longitude,d.target.latitude])[0];
+                .attr('x2', function(d){
+                    return projection([d.target.longitude,d.target.latitude])[0];
                 })
                 .attr('y2', function(d){
-                    return projection([d.source.longitude,d.target.latitude])[1];
+                    return projection([d.target.longitude,d.target.latitude])[1];
                 });
             node
                 .transition()
                 .duration(500)
                 .attr('cx', d=>projection([d.longitude,d.latitude])[0])
                 .attr('cy', d=>projection([d.longitude,d.latitude])[1]);
-        }
+    }
         else{
+            visType='force';
             link
                 .transition()
                 .duration(500)
